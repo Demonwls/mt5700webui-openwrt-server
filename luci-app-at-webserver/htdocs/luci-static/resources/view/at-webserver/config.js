@@ -213,10 +213,9 @@ return view.extend({
 		// Web界面链接
 		o = s.option(form.DummyValue, '_webui', _('Web 管理界面'));
 		o.cfgvalue = function() {
-			var port = uci.get('at-webserver', 'config', 'websocket_port') || '8765';
-			var url = window.location.protocol + '//' + window.location.hostname + '/5700/';
-			return '<a href="' + url + '" target="_blank" style="color:#0099CC">' + 
-			       url + '</a>';
+			var url = L.url('admin/services/at-webserver/home');
+			return '<a href="' + url + '" style="color:#0099CC">' +
+			       _('进入内嵌 Web 管理界面') + '</a>';
 		};
 		o.rawhtml = true;
 

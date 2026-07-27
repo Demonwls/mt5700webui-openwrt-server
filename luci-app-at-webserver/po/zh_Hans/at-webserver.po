@@ -79,6 +79,12 @@ msgstr "WebSocket服务器监听端口"
 msgid "Web 管理界面"
 msgstr "Web 管理界面"
 
+msgid "进入内嵌 Web 管理界面"
+msgstr "进入内嵌 Web 管理界面"
+
+msgid "5G 模块管理界面"
+msgstr "5G 模块管理界面"
+
 msgid "通知配置"
 msgstr "通知配置"
 
@@ -130,11 +136,14 @@ msgstr "网络信号强度变化或制式切换时发送通知"
 msgid "配置"
 msgstr "配置"
 
+msgid "首页"
+msgstr "首页"
+
 msgid "日志查看"
 msgstr "日志查看"
 
-msgid "AT调试"
-msgstr "AT调试"
+msgid "AT测试"
+msgstr "AT测试"
 
 msgid "通知日志"
 msgstr "通知日志"

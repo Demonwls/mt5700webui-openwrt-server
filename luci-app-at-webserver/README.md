@@ -4,6 +4,10 @@
 
 ## 功能特性
 
+### 首页
+- ✅ 在 LuCI 页面内嵌 `/5700/` Web 管理界面
+- ✅ 自动使用当前 LuCI 的协议、主机地址和端口，无需配置固定管理 IP
+
 ### 配置页面
 - ✅ 启用/禁用服务
 - ✅ 查看服务运行状态
@@ -13,7 +17,7 @@
 - ✅ 配置 WebSocket 端口
 - ✅ 配置通知推送（企业微信/日志）
 - ✅ 选择通知类型（短信/来电/信号）
-- ✅ 直接跳转到 Web 管理界面
+- ✅ 直接进入内嵌 Web 管理界面
 
 ### 日志查看页面
 - ✅ 实时查看通知日志
@@ -21,7 +25,7 @@
 - ✅ 一键清空日志
 - ✅ 显示日志统计信息
 
-### AT 调试页面
+### AT 测试页面
 - ✅ WebSocket 实时连接
 - ✅ 发送 AT 命令
 - ✅ 查看命令响应
@@ -35,16 +39,18 @@
 
 ```
 服务 → AT WebServer
+  ├── 首页       - 内嵌 Web 管理界面
   ├── 配置       - 服务配置和通知设置
   ├── 日志查看    - 查看和管理通知日志
-  └── AT调试     - 实时发送 AT 命令
+  └── AT测试     - 实时发送 AT 命令
 ```
 
 或者直接访问：
 ```
+首页：    http://路由器IP/cgi-bin/luci/admin/services/at-webserver/home
 配置页面：http://路由器IP/cgi-bin/luci/admin/services/at-webserver/config
 日志查看：http://路由器IP/cgi-bin/luci/admin/services/at-webserver/logs
-AT调试：  http://路由器IP/cgi-bin/luci/admin/services/at-webserver/debug
+AT测试：  http://路由器IP/cgi-bin/luci/admin/services/at-webserver/debug
 ```
 
 ## 配置界面
@@ -94,7 +100,7 @@ AT调试：  http://路由器IP/cgi-bin/luci/admin/services/at-webserver/debug
 - **信号变化通知**: 网络信号强度变化或制式切换时发送通知
 
 ### Web 管理界面
-- 直接跳转链接到 `/5700/` 管理界面
+- 首页通过同源相对路径 `/5700/` 内嵌管理界面，路由器管理地址变化时无需修改配置
 
 ## 文件结构
 
@@ -103,9 +109,10 @@ luci-app-at-webserver/
 ├── Makefile                                          # 编译配置
 ├── htdocs/luci-static/resources/view/
 │   └── at-webserver/
+│       ├── home.js                                   # 内嵌 Web 管理界面
 │       ├── config.js                                 # 配置界面
 │       ├── logs.js                                   # 日志查看界面
-│       └── debug.js                                  # AT调试界面
+│       └── debug.js                                  # AT测试界面
 ├── root/usr/share/
 │   ├── luci/menu.d/
 │   │   └── luci-app-at-webserver.json               # 菜单配置
@@ -164,9 +171,9 @@ root/usr/share/luci/menu.d/luci-app-at-webserver.json
 
 **日志文件位置：** `/var/log/at-notifications.log`（可在配置页面自定义）
 
-### 3. AT 命令调试
+### 3. AT 命令测试
 
-1. 进入"AT调试"页面
+1. 进入"AT测试"页面
 2. 等待 WebSocket 自动连接（状态显示为"已连接"）
 3. 在输入框中输入 AT 命令，或点击常用命令快捷按钮
 4. 查看实时响应输出
