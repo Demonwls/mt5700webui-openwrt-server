@@ -32,14 +32,5 @@
 			"type": "view",
 			"path": "at-webserver/logs"
 		}
-	},
-	"admin/services/at-webserver/debug": {
-		"title": "AT测试",
-		"order": 40,
-		"action": {
-			"type": "view",
-			"path": "at-webserver/debug"
-		}
 	}
 }
-

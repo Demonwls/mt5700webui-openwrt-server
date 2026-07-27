@@ -25,14 +25,6 @@
 - ✅ 一键清空日志
 - ✅ 显示日志统计信息
 
-### AT 测试页面
-- ✅ WebSocket 实时连接
-- ✅ 发送 AT 命令
-- ✅ 查看命令响应
-- ✅ 常用命令快捷按钮
-- ✅ 彩色输出显示
-- ✅ 自动重连机制
-
 ## 访问路径
 
 安装后，在 LuCI 界面中访问：
@@ -41,8 +33,7 @@
 服务 → AT WebServer
   ├── 首页       - 内嵌 Web 管理界面
   ├── 配置       - 服务配置和通知设置
-  ├── 日志查看    - 查看和管理通知日志
-  └── AT测试     - 实时发送 AT 命令
+  └── 日志查看    - 查看和管理通知日志
 ```
 
 或者直接访问：
@@ -50,7 +41,6 @@
 首页：    http://路由器IP/cgi-bin/luci/admin/services/at-webserver/home
 配置页面：http://路由器IP/cgi-bin/luci/admin/services/at-webserver/config
 日志查看：http://路由器IP/cgi-bin/luci/admin/services/at-webserver/logs
-AT测试：  http://路由器IP/cgi-bin/luci/admin/services/at-webserver/debug
 ```
 
 ## 配置界面
@@ -112,7 +102,7 @@ luci-app-at-webserver/
 │       ├── home.js                                   # 内嵌 Web 管理界面
 │       ├── config.js                                 # 配置界面
 │       ├── logs.js                                   # 日志查看界面
-│       └── debug.js                                  # AT测试界面
+│       └── debug.js                                  # 旧版直接访问兼容视图（不显示菜单）
 ├── root/usr/share/
 │   ├── luci/menu.d/
 │   │   └── luci-app-at-webserver.json               # 菜单配置
@@ -171,22 +161,6 @@ root/usr/share/luci/menu.d/luci-app-at-webserver.json
 
 **日志文件位置：** `/var/log/at-notifications.log`（可在配置页面自定义）
 
-### 3. AT 命令测试
-
-1. 进入"AT测试"页面
-2. 等待 WebSocket 自动连接（状态显示为"已连接"）
-3. 在输入框中输入 AT 命令，或点击常用命令快捷按钮
-4. 查看实时响应输出
-5. 点击"清空输出"清除历史记录
-
-**常用命令示例：**
-- `AT` - 测试连接
-- `AT+CPIN?` - 查询 SIM 卡状态
-- `AT+CSQ` - 查询信号强度
-- `AT+COPS?` - 查询运营商信息
-- `AT^MONSC` - 查询小区信息
-- `AT+CMGL=0` - 读取所有短信
-
 ### 通知消息示例
 
 **短信通知：**
@@ -218,4 +192,3 @@ SINR: 20 dB
 ## 注意事项
 
 配置保存后，服务会自动重启以应用新配置。
-

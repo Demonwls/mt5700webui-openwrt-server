@@ -142,9 +142,6 @@ msgstr "首页"
 msgid "日志查看"
 msgstr "日志查看"
 
-msgid "AT测试"
-msgstr "AT测试"
-
 msgid "通知日志"
 msgstr "通知日志"
 
@@ -375,4 +372,3 @@ msgstr "配置已确认，正在停止服务..."
 
 msgid "服务已停止，等待进程完全退出..."
 msgstr "服务已停止，等待进程完全退出..."
-
