@@ -14,6 +14,11 @@ config at-webserver 'config'
 	option websocket_port '8765'
 	option websocket_allow_wan '0'          # 是否允许外网访问 WebSocket (0=禁止, 1=允许)
 	option websocket_auth_key ''            # WebSocket 连接密钥（留空则不验证）
+
+	# 流量统计持久化
+	option traffic_persist_enabled '1'       # 保存模组累计流量，断电重启后继续累计
+	option traffic_persist_interval '5'      # 主动查询并固化的间隔（秒）
+	option traffic_state_file '/etc/at-webserver/traffic-stats.json'
 	
 	# 通知配置
 	option wechat_webhook ''

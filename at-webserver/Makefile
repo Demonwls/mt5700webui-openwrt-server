@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=at-webserver
 PKG_VERSION:=1.0
-PKG_RELEASE:=15
+PKG_RELEASE:=17
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
@@ -26,6 +26,7 @@ endef
 define Package/at-webserver/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/at-server.py $(1)/usr/bin/
+	$(INSTALL_DATA) ./files/usr/bin/traffic_stats.py $(1)/usr/bin/
 	
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/at-webserver $(1)/etc/init.d/

@@ -9,6 +9,8 @@
 - Tab 顺序为：首页、配置、日志查看。
 - iframe 使用同源相对路径，自动继承当前 LuCI 的协议、主机地址和端口；用户修改 IPv4 管理地址后无需修改插件配置。
 - 配置页面的 Web 管理界面入口改为返回 LuCI 内嵌首页。
+- MT5700 流量累计值由后端每5秒主动查询并原子固化，设备断电重启后从上次记录继续累计。
+- WebUI 的“流量统计清零”会同时清除模组计数和持久化记录。
 
 ## 页面入口
 
@@ -37,6 +39,27 @@ http://路由器IP/5700/
 luci-app-at-webserver/htdocs/luci-static/resources/view/at-webserver/home.js
 luci-app-at-webserver/root/usr/share/luci/menu.d/luci-app-at-webserver.json
 ```
+
+仅重新打包不含原生二进制的 `at-webserver` 时，也可运行：
+
+```sh
+python3 tools/build_at_webserver_ipk.py
+```
+
+输出为 `dist/at-webserver_1.0-17_all.ipk`，脚本会同时校验 IPK 成员、控制字段、文件内容、Unix 换行符和权限。
+
+### 流量统计持久化
+
+默认状态文件为 `/etc/at-webserver/traffic-stats.json`，仅在累计值发生变化时写入。保存过程使用临时文件、`fsync` 和原子替换，突然断电最多损失一个保存间隔内（默认5秒）的新增流量。
+
+```sh
+uci set at-webserver.config.traffic_persist_enabled='1'
+uci set at-webserver.config.traffic_persist_interval='5'
+uci commit at-webserver
+/etc/init.d/at-webserver restart
+```
+
+持续大流量场景下，每5秒写入会增加闪存写入次数；如设备使用普通 NAND/NOR，可将间隔调整为 `30` 或 `60` 秒。
 
 ---
 

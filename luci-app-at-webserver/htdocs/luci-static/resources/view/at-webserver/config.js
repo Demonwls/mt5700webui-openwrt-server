@@ -210,6 +210,25 @@ return view.extend({
 	o.placeholder = '留空表示不验证';
 	o.rmempty = true;
 
+	// 流量统计持久化
+	o = s.option(form.DummyValue, '_traffic_persist_title', _('流量统计持久化'));
+	o.rawhtml = true;
+	o.cfgvalue = function() {
+		return '<h3>' + _('断电重启后继续累计上传、下载流量和连接时长') + '</h3>';
+	};
+
+	o = s.option(form.Flag, 'traffic_persist_enabled', _('启用流量统计固化'),
+		_('后台主动读取模组累计值，并使用原子写入保存到持久存储。'));
+	o.rmempty = false;
+	o.default = '1';
+
+	o = s.option(form.Value, 'traffic_persist_interval', _('固化间隔（秒）'),
+		_('默认每5秒保存一次。持续产生流量时会按此频率写入存储；增大间隔可减少闪存写入次数。'));
+	o.datatype = 'range(1,3600)';
+	o.default = '5';
+	o.rmempty = false;
+	o.depends('traffic_persist_enabled', '1');
+
 		// Web界面链接
 		o = s.option(form.DummyValue, '_webui', _('Web 管理界面'));
 		o.cfgvalue = function() {

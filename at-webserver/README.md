@@ -33,6 +33,10 @@ uci set at-webserver.config.serial_baudrate='115200'
 # WebSocket 端口
 uci set at-webserver.config.websocket_port='8765'
 
+# 流量统计持久化（默认启用，每5秒固化一次）
+uci set at-webserver.config.traffic_persist_enabled='1'
+uci set at-webserver.config.traffic_persist_interval='5'
+
 # 通知配置
 uci set at-webserver.config.wechat_webhook='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY'
 uci set at-webserver.config.log_file='/var/log/at-notifications.log'

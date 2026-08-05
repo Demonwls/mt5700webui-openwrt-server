@@ -13,6 +13,7 @@ import serial
 import os
 from datetime import datetime
 import logging
+from traffic_stats import TrafficStatsStore
 
 # 配置日志
 logging.basicConfig(
@@ -56,6 +57,11 @@ DEFAULT_CONFIG = {
             "PORT": 8765
         },
         "AUTH_KEY": ""  # 连接密钥（留空则不验证）
+    },
+    "TRAFFIC_CONFIG": {
+        "ENABLED": True,
+        "PERSIST_INTERVAL": 5,
+        "STATE_FILE": "/etc/at-webserver/traffic-stats.json"
     }
 }
 
@@ -80,7 +86,8 @@ def load_config():
             'LOG_FILE': '',
             'NOTIFICATION_TYPES': DEFAULT_CONFIG['NOTIFICATION_CONFIG']['NOTIFICATION_TYPES'].copy()
         },
-        'WEBSOCKET_CONFIG': DEFAULT_CONFIG['WEBSOCKET_CONFIG'].copy()
+        'WEBSOCKET_CONFIG': DEFAULT_CONFIG['WEBSOCKET_CONFIG'].copy(),
+        'TRAFFIC_CONFIG': DEFAULT_CONFIG['TRAFFIC_CONFIG'].copy()
     }
     
     logger.info("开始从 UCI 加载配置...")
@@ -152,6 +159,18 @@ def load_config():
         # 读取连接密钥
         auth_key = uci_data.get('websocket_auth_key', '')
         config['WEBSOCKET_CONFIG']['AUTH_KEY'] = auth_key
+
+        # 流量统计持久化。默认每 5 秒主动查询并原子写入持久存储。
+        traffic_enabled = uci_data.get('traffic_persist_enabled', '1') == '1'
+        traffic_interval = max(1, int(uci_data.get('traffic_persist_interval', '5')))
+        traffic_state_file = uci_data.get(
+            'traffic_state_file', '/etc/at-webserver/traffic-stats.json'
+        )
+        config['TRAFFIC_CONFIG'] = {
+            'ENABLED': traffic_enabled,
+            'PERSIST_INTERVAL': traffic_interval,
+            'STATE_FILE': traffic_state_file
+        }
         
         if allow_wan:
             logger.info(f"配置加载: WebSocket 端口 = {ws_port} (允许外网访问)")
@@ -275,6 +294,7 @@ def load_config():
             'AT_CONFIG': DEFAULT_CONFIG['AT_CONFIG'],
             'NOTIFICATION_CONFIG': DEFAULT_CONFIG['NOTIFICATION_CONFIG'],
             'WEBSOCKET_CONFIG': DEFAULT_CONFIG['WEBSOCKET_CONFIG'],
+            'TRAFFIC_CONFIG': DEFAULT_CONFIG['TRAFFIC_CONFIG'],
             'SCHEDULE_CONFIG': {
                 'ENABLED': False,
                 'CHECK_INTERVAL': 60,
@@ -297,6 +317,7 @@ def load_config():
 config = load_config()
 AT_CONFIG = config['AT_CONFIG']
 NOTIFICATION_CONFIG = config.get('NOTIFICATION_CONFIG', DEFAULT_CONFIG['NOTIFICATION_CONFIG'])
+TRAFFIC_CONFIG = config.get('TRAFFIC_CONFIG', DEFAULT_CONFIG['TRAFFIC_CONFIG'])
 SCHEDULE_CONFIG = config.get('SCHEDULE_CONFIG', {
     'ENABLED': False,
     'CHECK_INTERVAL': 60,
@@ -2213,8 +2234,9 @@ class ATClient:
 
 class WebSocketServer:
     """WebSocket服务器类"""
-    def __init__(self, at_client: ATClient):
+    def __init__(self, at_client: ATClient, traffic_store: TrafficStatsStore):
         self.at_client = at_client
+        self.traffic_store = traffic_store
         self._active_connections = set()
         self._heartbeat_interval = 30  # 心跳间隔30秒
         logger.info("WebSocket服务器已初始化")
@@ -2231,6 +2253,7 @@ class WebSocketServer:
         try:
             # 打印接收到的AT命令
             logger.debug(f"接收到的AT命令: {command.strip()}")
+            command_name = command.strip().upper()
             
             if command.strip() == "AT+CONNECT?":
                 connection_type = "0" if self.at_client.connection_type == "NETWORK" else "1"
@@ -2257,14 +2280,21 @@ class WebSocketServer:
             response_lines = [line for line in response_text.split('\r\n')
                             if line and line.strip() != command.strip()]
             filtered_response = '\r\n'.join(response_lines)
+
+            command_success = 'ERROR' not in filtered_response.upper()
+            if command_success and command_name == 'AT^DSFLOWQRY':
+                filtered_response = self.traffic_store.rewrite_query_response(filtered_response)
+            elif command_success and filtered_response and command_name == 'AT^DSFLOWCLR':
+                # 模组清零成功后同步清除持久化累计值。
+                self.traffic_store.reset()
             
             # 打印响应
             logger.debug(f"响应: {filtered_response}")
             
             return ATResponse(
-                'ERROR' not in filtered_response.upper(),
-                filtered_response if 'ERROR' not in filtered_response.upper() else None,
-                filtered_response if 'ERROR' in filtered_response.upper() else None
+                command_success,
+                filtered_response if command_success else None,
+                filtered_response if not command_success else None
             )
         except KeyboardInterrupt:
             raise  # 向上传播 KeyboardInterrupt
@@ -2404,12 +2434,13 @@ async def main():
     logger.info("=" * 60)
     
     # 重新加载配置（确保使用最新配置）
-    global config, AT_CONFIG, NOTIFICATION_CONFIG, WEBSOCKET_CONFIG
+    global config, AT_CONFIG, NOTIFICATION_CONFIG, WEBSOCKET_CONFIG, TRAFFIC_CONFIG
     logger.info("正在重新加载配置...")
     config = load_config()
     AT_CONFIG = config['AT_CONFIG']
     NOTIFICATION_CONFIG = config['NOTIFICATION_CONFIG']
     WEBSOCKET_CONFIG = config['WEBSOCKET_CONFIG']
+    TRAFFIC_CONFIG = config['TRAFFIC_CONFIG']
     logger.info("✓ 配置重新加载完成")
     
     # 打印运行配置信息
@@ -2429,6 +2460,11 @@ async def main():
     logger.info(f"  监听端口: {config['WEBSOCKET_CONFIG']['IPV4']['PORT']}")
     logger.info(f"  IPv4 绑定: {config['WEBSOCKET_CONFIG']['IPV4']['HOST']}")
     logger.info(f"  IPv6 绑定: {config['WEBSOCKET_CONFIG']['IPV6']['HOST']}")
+
+    logger.info(f"\n流量统计持久化:")
+    logger.info(f"  状态: {'启用' if TRAFFIC_CONFIG['ENABLED'] else '禁用'}")
+    logger.info(f"  保存间隔: {TRAFFIC_CONFIG['PERSIST_INTERVAL']}秒")
+    logger.info(f"  状态文件: {TRAFFIC_CONFIG['STATE_FILE']}")
     
     logger.info(f"\n通知配置:")
     wechat = NOTIFICATION_CONFIG.get('WECHAT_WEBHOOK', '')
@@ -2445,7 +2481,11 @@ async def main():
     logger.info("=" * 60)
     
     client = ATClient()
-    websocket_server = WebSocketServer(client)
+    traffic_store = TrafficStatsStore(
+        state_file=TRAFFIC_CONFIG['STATE_FILE'],
+        enabled=TRAFFIC_CONFIG['ENABLED']
+    )
+    websocket_server = WebSocketServer(client, traffic_store)
     client.websocket_server = websocket_server
     message_processor = MessageProcessor()
     schedule_lock = ScheduleFrequencyLock(client)
@@ -2485,7 +2525,8 @@ async def main():
                         # 检查socket是否存在且已连接
                         if (isinstance(client.connection, NetworkATConnection) and 
                             client.connection.socket and 
-                            client.is_connected):
+                            client.is_connected and
+                            not client.connection._command_lock.locked()):
                             # 优化：增加超时时间，减少忙等待（0.1s -> 0.2s）
                             client.connection.socket.settimeout(0.2)
                             data = client.connection.socket.recv(4096)
@@ -2509,6 +2550,7 @@ async def main():
                         if (isinstance(client.connection, SerialATConnection) and 
                             client.connection.serial_port and 
                             client.connection.serial_port.is_open and
+                            not client.connection._command_lock.locked() and
                             client.connection.serial_port.in_waiting):
                             data = client.connection.serial_port.read(
                                 client.connection.serial_port.in_waiting
@@ -2537,6 +2579,27 @@ async def main():
                 logger.error(f"监控错误: {e}")
                 await asyncio.sleep(1)
 
+    async def traffic_stats_monitor():
+        """即使没有浏览器连接，也持续采集并固化模组累计流量。"""
+        interval = TRAFFIC_CONFIG['PERSIST_INTERVAL']
+        while True:
+            try:
+                if client.is_connected:
+                    response = await client.send_command("AT^DSFLOWQRY\r")
+                    response_text = response.decode('ascii', errors='ignore')
+                    if response_text and 'ERROR' not in response_text.upper():
+                        traffic_store.rewrite_query_response(response_text)
+                        traffic_store.flush()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning(f"流量统计固化失败，将在 {interval} 秒后重试: {e}")
+
+            try:
+                await asyncio.sleep(interval)
+            except asyncio.CancelledError:
+                break
+
     try:
         logger.info("正在连接到 AT 设备...")
         await client.connect()
@@ -2549,6 +2612,8 @@ async def main():
             asyncio.create_task(monitor_socket()),
             #asyncio.create_task(schedule_lock.monitor_loop())
         ]
+        if traffic_store.enabled:
+            monitor_tasks.append(asyncio.create_task(traffic_stats_monitor()))
         logger.info("✓ 监控任务已启动")
         
         # 启动WebSocket服务器
@@ -2613,6 +2678,9 @@ async def main():
         except:
             pass
         logger.info("✓ 监控任务已清理")
+
+        # 正常停止时再做一次同步；意外断电最多损失一个配置间隔内的数据。
+        traffic_store.flush(force=True)
             
         if server_v4 or server_v6:
             logger.info("正在关闭 WebSocket 服务器...")
