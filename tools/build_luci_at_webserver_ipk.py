@@ -16,7 +16,7 @@ from build_at_webserver_ipk import (
 
 
 PACKAGE = "luci-app-at-webserver"
-VERSION = "1.0-29"
+VERSION = "1.0-30"
 ARCHITECTURE = "all"
 
 
@@ -100,7 +100,7 @@ def verify_ipk(repo_root: Path, destination: Path) -> str:
     menu = data[
         "usr/share/luci/menu.d/luci-app-at-webserver.json"
     ][0].decode("utf-8")
-    if '"order": 5' not in menu:
+    if '"order": -10' not in menu:
         raise ValueError("LuCI service menu priority is missing")
     return hashlib.sha256(package_payload).hexdigest()
 

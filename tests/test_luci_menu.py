@@ -19,7 +19,7 @@ class LuciMenuTests(unittest.TestCase):
     def test_service_menu_is_prioritized(self):
         menu = json.loads(MENU_FILE.read_text(encoding="utf-8"))
         entry = menu["admin/services/at-webserver"]
-        self.assertEqual(5, entry["order"])
+        self.assertEqual(-10, entry["order"])
 
 
 if __name__ == "__main__":
