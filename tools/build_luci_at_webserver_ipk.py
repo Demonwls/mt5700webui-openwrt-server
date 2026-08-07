@@ -3,6 +3,7 @@
 
 import argparse
 import hashlib
+import json
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -16,7 +17,7 @@ from build_at_webserver_ipk import (
 
 
 PACKAGE = "luci-app-at-webserver"
-VERSION = "1.0-30"
+VERSION = "1.0-34"
 ARCHITECTURE = "all"
 
 
@@ -40,7 +41,7 @@ def make_control(data_size: int, epoch: int) -> bytes:
     fields = [
         "Package: {}".format(PACKAGE),
         "Version: {}".format(VERSION),
-        "Depends: libc, luci-base, at-webserver",
+        "Depends: libc, luci-base, at-webserver, luci-app-modem",
         "Source: package/{}".format(PACKAGE),
         "SourceName: {}".format(PACKAGE),
         "Section: luci",
@@ -97,11 +98,25 @@ def verify_ipk(repo_root: Path, destination: Path) -> str:
         if actual != expected:
             raise ValueError("packaged data mismatch: {}".format(source_name))
 
-    menu = data[
+    menu_text = data[
         "usr/share/luci/menu.d/luci-app-at-webserver.json"
     ][0].decode("utf-8")
-    if '"order": -10' not in menu:
-        raise ValueError("LuCI service menu priority is missing")
+    menu = json.loads(menu_text)
+    service_entry = menu.get("admin/services/at-webserver", {})
+    if service_entry.get("title") != "AT WebServer":
+        raise ValueError("AT WebServer service menu title is missing")
+    if service_entry.get("order") != -10:
+        raise ValueError("AT WebServer service menu priority is invalid")
+    expected_children = {
+        "admin/services/at-webserver/home": "首页",
+        "admin/services/at-webserver/config": "配置",
+        "admin/services/at-webserver/logs": "日志查看",
+    }
+    for path, title in expected_children.items():
+        if menu.get(path, {}).get("title") != title:
+            raise ValueError("invalid service submenu: {}".format(path))
+    if "admin/modem/tdtech" in menu:
+        raise ValueError("orphaned modem submenu is still present")
     return hashlib.sha256(package_payload).hexdigest()
 
 

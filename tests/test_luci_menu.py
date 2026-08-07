@@ -16,10 +16,21 @@ MENU_FILE = (
 
 
 class LuciMenuTests(unittest.TestCase):
-    def test_service_menu_is_prioritized(self):
+    def test_menu_is_available_under_services(self):
         menu = json.loads(MENU_FILE.read_text(encoding="utf-8"))
         entry = menu["admin/services/at-webserver"]
+        self.assertEqual("AT WebServer", entry["title"])
         self.assertEqual(-10, entry["order"])
+        self.assertEqual(
+            "首页", menu["admin/services/at-webserver/home"]["title"]
+        )
+        self.assertEqual(
+            "配置", menu["admin/services/at-webserver/config"]["title"]
+        )
+        self.assertEqual(
+            "日志查看", menu["admin/services/at-webserver/logs"]["title"]
+        )
+        self.assertNotIn("admin/modem/tdtech", menu)
 
 
 if __name__ == "__main__":

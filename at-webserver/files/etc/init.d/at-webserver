@@ -7,9 +7,6 @@ USE_PROCD=1
 PROG=/usr/bin/at-server.py
 PROG_NAME="at-server.py"
 
-# 加载 UCI 函数库（必须在文件顶部）
-. /lib/functions.sh
-
 start_service() {
 	local enabled
 	

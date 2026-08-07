@@ -47,7 +47,7 @@ python3 tools/build_at_webserver_ipk.py
 python3 tools/build_luci_at_webserver_ipk.py
 ```
 
-输出为 `dist/at-webserver_1.0-17_all.ipk` 和 `dist/luci-app-at-webserver_1.0-30_all.ipk`，脚本会同时校验 IPK 成员、控制字段、文件内容、Unix 换行符和权限。
+输出为 `dist/at-webserver_1.0-20_all.ipk` 和 `dist/luci-app-at-webserver_1.0-34_all.ipk`，脚本会同时校验 IPK 成员、控制字段、文件内容、Unix 换行符和权限。
 
 ### 流量统计持久化
 

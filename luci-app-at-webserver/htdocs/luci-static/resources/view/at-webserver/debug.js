@@ -85,7 +85,7 @@ return view.extend({
 						E('p', {}, _('服务未运行，请先启动 AT WebServer 服务')),
 						E('p', {}, [
 							E('a', { 
-								'href': L.url('admin/services/at-webserver/config'),
+								'href': L.url('admin/modem/tdtech/config'),
 								'class': 'btn cbi-button-apply'
 							}, _('前往配置'))
 						])

@@ -13,7 +13,7 @@ from typing import Dict, Iterable, Tuple
 
 
 PACKAGE = "at-webserver"
-VERSION = "1.0-17"
+VERSION = "1.0-20"
 ARCHITECTURE = "all"
 DEPENDENCIES = (
     "libc",

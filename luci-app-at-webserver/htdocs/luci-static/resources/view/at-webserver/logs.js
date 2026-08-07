@@ -71,7 +71,7 @@ return view.extend({
 						E('p', {}, _('请先在配置页面中设置日志文件路径，例如：/var/log/at-notifications.log')),
 						E('p', {}, [
 							E('a', { 
-								'href': L.url('admin/services/at-webserver/config'),
+								'href': L.url('admin/modem/tdtech/config'),
 								'class': 'btn cbi-button-apply'
 							}, _('前往配置'))
 						])

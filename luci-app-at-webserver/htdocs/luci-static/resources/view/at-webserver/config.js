@@ -232,7 +232,7 @@ return view.extend({
 		// Web界面链接
 		o = s.option(form.DummyValue, '_webui', _('Web 管理界面'));
 		o.cfgvalue = function() {
-			var url = L.url('admin/services/at-webserver/home');
+			var url = L.url('admin/modem/tdtech/home');
 			return '<a href="' + url + '" style="color:#0099CC">' +
 			       _('进入内嵌 Web 管理界面') + '</a>';
 		};
