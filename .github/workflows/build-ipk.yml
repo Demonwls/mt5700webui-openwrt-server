@@ -1,0 +1,31 @@
+name: Manual Build OpenWrt IPK
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: '选择目标架构 (Target Architecture)'
+        required: true
+        default: 'x86/64'
+        type: choice
+        options:
+          - 'x86/64'
+          - 'armsr/armv8'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Build IPK via OpenWrt SDK
+        uses: openwrt/gh-action-sdk@v1
+        with:
+          archetype: ${{ inputs.arch }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipk-${{ inputs.arch }}
+          path: bin/packages/*/*/*.ipk
