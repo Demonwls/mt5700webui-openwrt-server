@@ -22,7 +22,7 @@ jobs:
       - name: Build IPK via OpenWrt SDK
         uses: openwrt/gh-action-sdk@v1
         with:
-          archetype: ${{ inputs.arch }}
+          target: ${{ inputs.arch }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
