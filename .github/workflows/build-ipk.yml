@@ -1,6 +1,8 @@
-name: Pure Python Fast Build IPK
+name: Build OpenWrt IPK
 
 on:
+  push:
+    branches: [ "main", "master" ]
   workflow_dispatch:
     inputs:
       arch:
@@ -30,20 +32,18 @@ jobs:
           cat << 'EOF' > pack.py
 import os, tarfile, io, time, sys
 
-arch = sys.argv[1] if len(sys.argv) > 1 else "all"
+arch = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] else "aarch64"
 
 def build_ipk(pkg_name, version, arch, source_dir, output_file):
     debian_binary = b"2.0\n"
     control_text = f"Package: {pkg_name}\nVersion: {version}\nArchitecture: {arch}\nMaintainer: ZJJCKA\nDescription: WebUI for MT5700\n".encode("utf-8")
     
-    # 1. control.tar.gz
     ctrl_io = io.BytesIO()
     with tarfile.open(fileobj=ctrl_io, mode="w:gz") as tar:
         ti = tarfile.TarInfo(name="./control")
         ti.size, ti.mtime, ti.mode = len(control_text), int(time.time()), 0o644
         tar.addfile(ti, io.BytesIO(control_text))
     
-    # 2. data.tar.gz
     data_io = io.BytesIO()
     with tarfile.open(fileobj=data_io, mode="w:gz") as tar:
         for root, _, files in os.walk(source_dir):
@@ -61,7 +61,6 @@ def build_ipk(pkg_name, version, arch, source_dir, output_file):
                 ti.size, ti.mtime, ti.mode = len(data), int(time.time()), mode
                 tar.addfile(ti, io.BytesIO(data))
                 
-    # 3. ipk
     with tarfile.open(output_file, mode="w:gz") as ipk:
         for name, data in [("debian-binary", debian_binary), ("control.tar.gz", ctrl_io.getvalue()), ("data.tar.gz", data_io.getvalue())]:
             ti = tarfile.TarInfo(name=name)
@@ -76,5 +75,5 @@ EOF
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mt5700webui-${{ inputs.arch }}-ipk
+          name: mt5700webui-ipk
           path: "*.ipk"
