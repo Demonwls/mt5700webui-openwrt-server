@@ -17,15 +17,16 @@ def build_ipk(pkg_name, version, arch, output_file):
         ti.size, ti.mtime, ti.mode = len(control_text), int(time.time()), 0o644
         tar.addfile(ti, io.BytesIO(control_text))
     
-    # 2. 目录映射表：(源码相对目录, 释放到路由器的根前缀)
+    # 2. 目录映射配置：(源码路径, 路由器根路径前缀)
     mappings = [
-        ("luci-app-at-webserver/root", ""),        # 映射到 / (usr/share/luci/menu.d 等)
-        ("luci-app-at-webserver/htdocs", "www"),    # 映射到 /www (luci-static)
-        ("at-webserver/files", ""),                 # 映射到 / (etc/init.d, usr/bin, www/5700 等)
+        ("luci-app-at-webserver/root", ""),        # 映射菜单与 ACL 文件 -> /usr/share/...
+        ("luci-app-at-webserver/htdocs", "www"),    # 映射静态视图 JS 文件 -> /www/luci-static/...
+        ("at-webserver/files", ""),                 # 映射后台脚本与 Web 前端 -> /etc/init.d/..., /usr/bin/...
     ]
 
-    # 3. 构建 data.tar.gz
     data_io = io.BytesIO()
+    added_dirs = set()
+
     with tarfile.open(fileobj=data_io, mode="w:gz") as tar:
         for src_dir, target_prefix in mappings:
             if not os.path.exists(src_dir):
@@ -38,17 +39,36 @@ def build_ipk(pkg_name, version, arch, output_file):
                     if target_prefix:
                         arcname = "./" + target_prefix + "/" + rel
                     else:
-                        arcname = "./" + arcname_path if (arcname_path := rel) else "./"
-                        
+                        arcname = "./" + rel
+
+                    # 补全父级目录节点，确保 Busybox tar 解压时能顺利新建文件夹
+                    parent_dir = os.path.dirname(arcname)
+                    dir_parts = parent_dir.split("/")
+                    current_dir = ""
+                    for part in dir_parts:
+                        if not part:
+                            continue
+                        current_dir = current_dir + "/" + part if current_dir else part
+                        if current_dir not in added_dirs:
+                            d_ti = tarfile.TarInfo(name=current_dir)
+                            d_ti.type = tarfile.DIRTYPE
+                            d_ti.mode = 0o755
+                            d_ti.mtime = int(time.time())
+                            tar.addfile(d_ti)
+                            added_dirs.add(current_dir)
+
+                    # 添加文件项
                     mode = 0o755 if f.endswith(".sh") or "init.d" in arcname or "bin" in arcname or "cgi-bin" in arcname else 0o644
-                    
                     with open(fp, "rb") as rf:
                         data = rf.read()
+                    
                     ti = tarfile.TarInfo(name=arcname)
-                    ti.size, ti.mtime, ti.mode = len(data), int(time.time()), mode
+                    ti.size = len(data)
+                    ti.mtime = int(time.time())
+                    ti.mode = mode
                     tar.addfile(ti, io.BytesIO(data))
                 
-    # 4. 打包 .ipk
+    # 3. 打包生成最终的 .ipk 格式
     with tarfile.open(output_file, mode="w:gz") as ipk:
         for name, data in [("debian-binary", debian_binary), ("control.tar.gz", ctrl_io.getvalue()), ("data.tar.gz", data_io.getvalue())]:
             ti = tarfile.TarInfo(name=name)
